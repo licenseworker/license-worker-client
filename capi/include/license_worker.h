@@ -36,13 +36,14 @@ typedef enum LwResult {
 } LwResult;
 
 // Whether the app should open. Only `unlocked` matters to most apps.
+// Zero is `LW_STATE_INACTIVE`, so a zero-initialised status never reads as licensed.
 typedef enum LwState {
-  // A licence in force.
-  LW_STATE_VALID = 0,
-  // Expired, inside the grace period: open, and a good moment to ask the user to renew.
-  LW_STATE_GRACE = 1,
   // Not activated, or the stored licence is no longer usable (`reason` says why).
-  LW_STATE_INACTIVE = 2,
+  LW_STATE_INACTIVE = 0,
+  // A licence in force.
+  LW_STATE_VALID = 1,
+  // Expired, inside the grace period: open, and a good moment to ask the user to renew.
+  LW_STATE_GRACE = 2,
   // The server signed a revocation of this key; the stored licence is forgotten.
   LW_STATE_REVOKED = 3,
 } LwState;

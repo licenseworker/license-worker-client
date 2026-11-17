@@ -17,6 +17,26 @@ app refuses a licence.
   (a small RAII wrapper, the way a plugin holds it), built by
   [`examples/CMakeLists.txt`](../examples/CMakeLists.txt).
 
+## Prebuilt packages
+
+Each [GitHub Release](https://github.com/licenseworker/license-worker-client/releases)
+carries ready-built packages, so nothing needs a Rust toolchain:
+
+| Package | Platform | Inside |
+|---|---|---|
+| `license_worker-<tag>-x86_64-pc-windows-msvc-mt.zip` | Windows x64, static C runtime (`/MT`, usual for plugins) | `license_worker.lib`, `license_worker.dll` + `.dll.lib` |
+| `license_worker-<tag>-x86_64-pc-windows-msvc-md.zip` | Windows x64, DLL C runtime (`/MD`) | same |
+| `license_worker-<tag>-aarch64-pc-windows-msvc-mt.zip` / `-md.zip` | Windows on ARM64 | same |
+| `license_worker-<tag>-macos-universal.zip` | macOS 11+, arm64 and x86_64 | `liblicense_worker.a`, `liblicense_worker.dylib` |
+| `LicenseWorker-<tag>.xcframework.zip` | iOS 13+ (device), iOS Simulator (arm64, x86_64), macOS 11+ | static libraries, header and module map (`import LicenseWorker` in Swift); `.sha256` beside it |
+| `license_worker-<tag>-x86_64-linux-gnu.tar.gz` | Linux x86_64 (glibc) | `liblicense_worker.a`, `liblicense_worker.so` |
+
+Every package has `include/license_worker.h` and `link-libs.txt`, the system
+libraries to link with the static library, printed by rustc for that very
+build. Windows, macOS and the XCFramework are built with the `keyring` feature
+(Credential Manager, Keychain); the Linux package is not, so it needs no
+libdbus: give it a `storage_path`.
+
 ## Plugins link statically
 
 A plugin is a guest in someone else's process: link `license_worker`

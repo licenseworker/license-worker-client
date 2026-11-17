@@ -4,7 +4,7 @@ All notable changes to this crate are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the crate follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0] - 2026-11-17
 
 ### Added
 
@@ -20,6 +20,13 @@ All notable changes to this crate are recorded here. The format follows
   simulator) and universal macOS, with a module map for Swift.
 - CI builds and runs them on Linux, macOS and Windows, and builds the
   XCFramework.
+- Prebuilt packages on each GitHub Release: Windows x64 and ARM64 (`/MD` and
+  `/MT`), universal macOS, `LicenseWorker.xcframework` (iOS, iOS Simulator,
+  macOS) and Linux x86_64.
+
+### Changed
+
+- The Rust crate is unchanged apart from its version.
 
 ## [0.1.0] - 2026-11-17
 
@@ -42,4 +49,5 @@ docs, packaged as one crate.
 - The `license-worker-client` command, in the contract License Worker's
   `npm run check:clients` drives.
 
+[0.2.0]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.2.0
 [0.1.0]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.1.0

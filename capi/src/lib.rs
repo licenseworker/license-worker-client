@@ -40,15 +40,16 @@ pub enum LwResult {
 }
 
 /// Whether the app should open. Only `unlocked` matters to most apps.
+/// Zero is `LW_STATE_INACTIVE`, so a zero-initialised status never reads as licensed.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LwState {
-    /// A licence in force.
-    Valid = 0,
-    /// Expired, inside the grace period: open, and a good moment to ask the user to renew.
-    Grace = 1,
     /// Not activated, or the stored licence is no longer usable (`reason` says why).
-    Inactive = 2,
+    Inactive = 0,
+    /// A licence in force.
+    Valid = 1,
+    /// Expired, inside the grace period: open, and a good moment to ask the user to renew.
+    Grace = 2,
     /// The server signed a revocation of this key; the stored licence is forgotten.
     Revoked = 3,
 }

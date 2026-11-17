@@ -129,6 +129,12 @@ fn null_pointers_are_refused_not_dereferenced() {
 }
 
 #[test]
+fn a_zeroed_status_is_locked() {
+    let st: LwStatus = unsafe { std::mem::zeroed() };
+    assert_eq!((st.state, st.unlocked), (LwState::Inactive, false));
+}
+
+#[test]
 fn small_helpers() {
     assert_eq!(s(lw_version()), env!("CARGO_PKG_VERSION"));
     assert_eq!(s(lw_result_name(1)), "unreachable");
