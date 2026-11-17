@@ -93,8 +93,12 @@ jobs:
           cp capi/include/license_worker.h pkg/$name/include/
           d=target/${{ matrix.target }}/release
           cp $d/license_worker.lib $d/license_worker.dll $d/license_worker.dll.lib pkg/$name/lib/
+          # windows.0.53.0.lib is an import library inside a Rust crate (keyring's
+          # windows-sys); no C project has it. The system libraries it stands for
+          # are listed instead, as examples/CMakeLists.txt links them in CI.
           { echo "# Static: link license_worker.lib with these (MSVC, /${{ matrix.crt }} C runtime):";
-            grep -o 'native-static-libs: .*' build.log | sed -e 's/native-static-libs: //' -e 's/\x1b\[[0-9;]*m//g' | tail -1; } > pkg/$name/link-libs.txt
+            grep -o 'native-static-libs: .*' build.log | sed -e 's/native-static-libs: //' -e 's/\x1b\[[0-9;]*m//g' \
+              -e 's/windows\.[0-9.]*\.lib/advapi32.lib secur32.lib crypt32.lib bcrypt.lib ncrypt.lib/' | tail -1; } > pkg/$name/link-libs.txt
           cp capi/README.md LICENSE pkg/$name/
           cd pkg && 7z a -tzip ../$name.zip $name > /dev/null
       - uses: actions/upload-artifact@v6

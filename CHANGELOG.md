@@ -4,6 +4,15 @@ All notable changes to this crate are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the crate follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Windows packages: `link-libs.txt` named `windows.0.53.0.lib`, an import
+  library no C project has; it now lists the system libraries instead
+  (`advapi32 secur32 crypt32 bcrypt ncrypt`). The 0.2.1 packages are fine to
+  use: link those in its place.
+
 ## [0.2.1] - 2026-11-17
 
 ### Added
