@@ -39,7 +39,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable
@@ -61,7 +61,7 @@ jobs:
             grep -o 'native-static-libs: .*' build.log | sed -e 's/native-static-libs: //' -e 's/\x1b\[[0-9;]*m//g' | tail -1; } > pkg/$name/link-libs.txt
           cp capi/README.md LICENSE pkg/$name/
           cd pkg && 7z a -tzip ../$name.zip $name > /dev/null
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: windows-${{ matrix.target }}-${{ matrix.crt }}
           path: "*.zip"
@@ -71,7 +71,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable
@@ -116,7 +116,7 @@ jobs:
           name=LicenseWorker-$TAG.xcframework
           (cd build/apple && zip -qry ../../$name.zip LicenseWorker.xcframework)
           swift package compute-checksum $name.zip > $name.zip.sha256 2>/dev/null || shasum -a 256 $name.zip | cut -d' ' -f1 > $name.zip.sha256
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: apple
           path: |
@@ -128,7 +128,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
       - uses: dtolnay/rust-toolchain@stable
@@ -147,7 +147,7 @@ jobs:
           cc -O2 -I pkg/$name/include examples/c/lw_cli.c pkg/$name/lib/liblicense_worker.a $(tail -1 pkg/$name/link-libs.txt) -o lw_static
           examples/c/smoke.sh ./lw_static
           tar -C pkg -czf $name.tar.gz $name
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: linux
           path: "*.tar.gz"
@@ -160,10 +160,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true

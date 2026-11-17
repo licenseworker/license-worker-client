@@ -212,6 +212,10 @@ License Worker's end-to-end check drives against a real local server:
 LW_RUST_CLIENT_DIR=../license-worker-client npm run check:clients
 ```
 
+## Security
+
+Please report a security problem privately: see [SECURITY.md](SECURITY.md).
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
