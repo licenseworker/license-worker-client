@@ -28,6 +28,7 @@
 //! a rate limit, a 5xx, an unsigned refusal: the app stays as it was, judged
 //! by the licence it already holds.
 #![forbid(unsafe_code)]
+#![warn(missing_docs)]
 
 mod client;
 pub mod storage;

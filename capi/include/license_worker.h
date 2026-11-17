@@ -17,6 +17,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define LW_VERSION_MAJOR 0
+#define LW_VERSION_MINOR 3
+#define LW_VERSION_PATCH 1
+#define LW_VERSION_STRING "0.3.1"
+
 // What a call came to.
 typedef enum LwResult {
   // Done.
@@ -61,12 +66,17 @@ typedef struct LwConfig {
   const char *const *key_ids;
   // The public keys (base64), in the same order as `key_ids`. Embed both keys your server publishes.
   const char *const *public_keys;
+  // How many entries `key_ids` and `public_keys` have. Give 2: with only the active key,
+  // every licence signed after a key rotation fails to verify (nothing locks, but an
+  // expiring licence runs out). 1 is only for tests.
   size_t key_count;
   // Accept only licences of these products; none (0) accepts any.
   const int64_t *product_ids;
+  // How many entries `product_ids` has.
   size_t product_count;
   // Accept only licences of these variants; none (0) accepts any.
   const int64_t *variant_ids;
+  // How many entries `variant_ids` has.
   size_t variant_count;
   // Shown in the admin page next to the activation; NULL: this computer's name.
   const char *instance_name;
@@ -83,6 +93,7 @@ typedef struct LwConfig {
 
 // The answer of a check or an activation. Clear it with `lw_status_clear`.
 typedef struct LwStatus {
+  // Valid, grace, inactive or revoked.
   enum LwState state;
   // `LW_STATE_VALID` or `LW_STATE_GRACE`: open the app.
   bool unlocked;
@@ -136,7 +147,7 @@ void lw_string_free(char *s);
 // This computer's name (the default instance name). Free with `lw_string_free`.
 char *lw_default_instance_name(void);
 
-// The library's version, e.g. "0.1.0". Static: do not free.
+// The library's version, the same text as `LW_VERSION_STRING` in the header. Static: do not free.
 const char *lw_version(void);
 
 // A short English name of an `LwResult` value, e.g. "unreachable" (or "unknown"). Static: do not free.

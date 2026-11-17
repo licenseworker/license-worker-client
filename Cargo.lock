@@ -848,7 +848,7 @@ dependencies = [
 
 [[package]]
 name = "license-worker-client"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "base64",
  "ed25519-dalek",
@@ -862,10 +862,18 @@ dependencies = [
 
 [[package]]
 name = "license-worker-client-capi"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "cbindgen",
  "license-worker-client",
+]
+
+[[package]]
+name = "license-worker-client-cli"
+version = "0.3.1"
+dependencies = [
+ "license-worker-client",
+ "serde_json",
 ]
 
 [[package]]

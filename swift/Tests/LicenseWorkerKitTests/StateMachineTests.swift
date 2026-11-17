@@ -585,7 +585,10 @@ final class StateMachineTests: XCTestCase {
         XCTAssertEqual(rig.server.calls.map(\.form), [["license_key": key.uppercased(), "instance_name": "Test Mac"]])
         XCTAssertEqual(
             rig.saved,
-            StoredLicense(licenseKey: key.uppercased(), instanceID: newInstance, token: token, unlocked: true, lastValidatedAt: rig.clock.now)
+            StoredLicense(
+                licenseKey: key.uppercased(), instanceID: newInstance, token: token, unlocked: true,
+                lastValidatedAt: rig.clock.now, highWaterMark: rig.clock.now
+            )
         )
         // And the app opens offline at the next launch.
         XCTAssertEqual(Rig(rig.saved).controller.status, .licensed(.signed))
@@ -629,6 +632,45 @@ final class StateMachineTests: XCTestCase {
     }
 
     /// a key of another product is refused clearly, and the seat it took is given back.
+    func testANewActivationKeepsTheLatestTimeSeen() async throws {
+        let later = TestClock().now.addingTimeInterval(90 * day)
+        var start = Start.signed.stored
+        start.highWaterMark = later
+        let rig = Rig(start)
+        let token = TestKeys.token(key: otherKey, instanceID: newInstance)
+        rig.server.handler = { _ in .json(activatedBody(token: token)) }
+        try await rig.controller.activate(key: otherKey)
+        XCTAssertEqual(rig.saved?.highWaterMark, later, "a clock set back before the activation stays set back")
+    }
+
+    func testAnActivationIsJudgedAgainstTheLatestTimeSeen() async {
+        // The device has seen a time past this subscription's expiry and grace.
+        let clock = TestClock()
+        var start = Start.signed.stored
+        start.highWaterMark = clock.now.addingTimeInterval(60 * day)
+        let rig = Rig(start)
+        let token = TestKeys.token(key: otherKey, instanceID: newInstance, exp: clock.now.addingTimeInterval(10 * day))
+        rig.server.handler = { call in
+            call.action == "activate"
+                ? .json(activatedBody(token: token))
+                : .json(["deactivated": true, "error": nil, "token": nil])
+        }
+        do {
+            try await rig.controller.activate(key: otherKey)
+            XCTFail("an expired licence must not activate")
+        } catch {}
+        XCTAssertEqual(rig.saved?.licenseKey, key, "the previous licence is kept")
+        XCTAssertEqual(rig.server.actions, ["activate", "deactivate"], "and the seat is given back")
+    }
+
+    func testTheMarkMovesAtLaunch() {
+        // A subscription stored with no mark yet: the first launch records the time.
+        let clock = TestClock()
+        let token = TestKeys.token(key: key, instanceID: instance, exp: clock.now.addingTimeInterval(30 * day))
+        let rig = Rig(StoredLicense(licenseKey: key, instanceID: instance, token: token, unlocked: true))
+        XCTAssertEqual(rig.saved?.highWaterMark, rig.clock.now)
+    }
+
     func testALicenceThatCannotBeStoredGivesItsSeatBack() async {
         let rig = Rig(nil)
         rig.storage.failWrites = true

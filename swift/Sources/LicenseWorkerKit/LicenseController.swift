@@ -133,6 +133,9 @@ public final class LicenseController: ObservableObject {
                 try? storage.save(imported)
             }
         }
+        // The clock only moves the mark forward, from the first moment the app runs,
+        // not only when it gets to ask the server.
+        advanceHighWaterMark()
         status = evaluate()
     }
 
@@ -362,10 +365,13 @@ public final class LicenseController: ObservableObject {
             throw LicenseError.server(response.error ?? "The license server refused this key.")
         }
 
+        // The latest time this device has seen survives a new activation, as in the Rust client.
+        let previousMark = stored?.highWaterMark
         let verdict = configuration.verifier.verify(
             token,
             expecting: configuration.expectation(licenseKey: key, instanceID: response.instanceID),
-            now: now()
+            now: now(),
+            highWaterMark: previousMark
         )
         switch verdict {
         case .valid, .grace:
@@ -373,7 +379,8 @@ public final class LicenseController: ObservableObject {
                 throw LicenseError.server(response.error ?? "The license server refused this key.")
             }
             let license = StoredLicense(
-                licenseKey: key, instanceID: instanceID, token: token, unlocked: true, lastValidatedAt: now()
+                licenseKey: key, instanceID: instanceID, token: token, unlocked: true, lastValidatedAt: now(),
+                highWaterMark: [previousMark, now()].compactMap { $0 }.max()
             )
             do {
                 try storage.save(license)

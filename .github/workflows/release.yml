@@ -54,11 +54,32 @@ jobs:
             exit 0
           fi
           for f in Cargo.toml capi/Cargo.toml; do
-            grep -q "^version = \"$VERSION\"" $f || { echo "::error::$f does not say version = \"$VERSION\""; exit 1; }
+            # -x -F: the whole line, literally (the dots of a version are not "any character").
+            grep -qxF "version = \"$VERSION\"" $f || { echo "::error::$f does not say version = \"$VERSION\""; exit 1; }
           done
-          grep -q "^## \[$VERSION\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no '## [$VERSION]' section"; exit 1; }
+          grep -qF "## [$VERSION]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no '## [$VERSION]' section"; exit 1; }
           echo "ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "new=true" >> "$GITHUB_OUTPUT"
+
+  # Nothing is tagged or released unless the tests pass on the code being released.
+  tests:
+    needs: prepare
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - run: cargo test --workspace --all-features
+      - if: runner.os == 'macOS'
+        run: swift test
 
   windows:
     needs: prepare
@@ -201,7 +222,7 @@ jobs:
           retention-days: 3
 
   release:
-    needs: [prepare, windows, macos, linux]
+    needs: [prepare, tests, windows, macos, linux]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

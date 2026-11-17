@@ -21,6 +21,7 @@ use std::fmt;
 /// The signed fields of a licence.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Payload {
+    /// Format version, `1`.
     pub v: u32,
     /// Which of the server's keys signed it.
     pub kid: String,
@@ -28,9 +29,13 @@ pub struct Payload {
     pub typ: String,
     /// sha256 hex of the normalised licence key (see [`key_hash`]).
     pub key_hash: String,
+    /// The store the key belongs to.
     pub store_id: i64,
+    /// The product the key belongs to.
     pub product_id: i64,
+    /// The product variant the key belongs to.
     pub variant_id: i64,
+    /// The activation it was issued to; `None` when validated without one.
     pub instance_id: Option<String>,
     /// Issued at, unix seconds.
     pub iat: i64,
@@ -53,6 +58,7 @@ pub enum Verified {
 }
 
 impl Verified {
+    /// The verified payload, whatever the verdict.
     pub fn payload(&self) -> &Payload {
         match self {
             Verified::Valid(p) | Verified::Grace(p) | Verified::Revoked(p) => p,
@@ -63,13 +69,21 @@ impl Verified {
 /// Why a licence was not accepted. None of these is a reason to lock an app.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Failure {
+    /// Not three dot-separated parts, not base64url, or a payload of the wrong shape.
     Malformed,
+    /// A format version this verifier does not know.
     UnsupportedVersion,
+    /// Signed with a key the app does not embed.
     UnknownKid,
+    /// The signature does not verify (a forgery, or a changed token).
     BadSignature,
+    /// About another licence key.
     WrongKey,
+    /// For another product, variant or store.
     WrongProduct,
+    /// Issued to another activation.
     WrongInstance,
+    /// Past its expiry and its grace period.
     Expired,
 }
 
@@ -100,12 +114,17 @@ impl std::error::Error for Failure {}
 /// What the licence must be about. `None` fields are not checked.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Expect {
+    /// The [`key_hash`] of the key the app holds.
     pub key_hash: Option<String>,
+    /// Products the app accepts.
     pub product_ids: Option<Vec<i64>>,
+    /// Variants the app accepts.
     pub variant_ids: Option<Vec<i64>>,
+    /// The app's own activation.
     pub instance_id: Option<String>,
 }
 
+/// How [`verify`] treats time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Options {
     /// How long past `exp` the licence still opens the app.
@@ -127,7 +146,8 @@ pub fn key_hash(licence_key: &str) -> String {
 }
 
 /// Verifies `token` against `public_keys` (kid -> raw 32-byte Ed25519 public key, base64).
-/// Embed both keys your server publishes, so a key rotation does not lock anyone out.
+/// Embed **both** keys your server publishes: with one, every licence signed after a
+/// key rotation fails as [`Failure::UnknownKid`].
 pub fn verify(token: &str, public_keys: &HashMap<String, String>, now_unix: i64, expect: &Expect, opts: Options) -> Result<Verified, Failure> {
     let parts: Vec<&str> = token.split('.').collect();
     if parts.len() != 3 {

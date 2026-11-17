@@ -7,13 +7,18 @@ use std::time::Duration;
 /// An HTTP answer with any status, as the server sent it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HttpResponse {
+    /// The HTTP status code.
     pub status: u16,
+    /// The body, as text (JSON from a License Worker server).
     pub body: String,
 }
 
 /// No HTTP answer at all: no network, DNS, TLS, timeout.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TransportError(pub String);
+pub struct TransportError(
+    /// What went wrong, for logs.
+    pub String,
+);
 
 impl fmt::Display for TransportError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -23,6 +28,8 @@ impl fmt::Display for TransportError {
 
 impl std::error::Error for TransportError {}
 
+/// Sends one request to the server. [`UreqTransport`] is the real one; tests
+/// implement it to script answers.
 pub trait Transport {
     /// POSTs `fields` as `application/x-www-form-urlencoded` with `Accept: application/json`.
     /// Every HTTP status, 4xx and 5xx included, is an `Ok`.
@@ -54,6 +61,7 @@ pub struct UreqTransport {
 }
 
 impl UreqTransport {
+    /// A transport with `timeout` per request and the crate's user agent.
     pub fn new(timeout: Duration) -> Self {
         let agent = ureq::AgentBuilder::new().timeout(timeout).user_agent(concat!("license-worker-client/", env!("CARGO_PKG_VERSION"))).build();
         UreqTransport { agent }

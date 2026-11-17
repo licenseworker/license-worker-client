@@ -5,6 +5,10 @@ public struct LicenseConfiguration: Sendable {
     public var baseURL: URL
     /// kid -> raw Ed25519 public key, base64: both keys your server publishes
     /// (active and backup). A token signed by any other key is rejected.
+    ///
+    /// **Give two.** With only the active key, every licence signed after the server
+    /// moves to its backup key is rejected: nothing locks, but nothing new verifies
+    /// either, and an expiring licence runs out. One key is only for tests.
     public var publicKeys: [String: String]
     /// What a licence must be for. nil = not checked.
     public var storeID: Int?

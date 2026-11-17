@@ -10,6 +10,7 @@
 //!   an `LwStatus` is cleared with `lw_status_clear`.
 //! - NULL is accepted wherever a pointer is optional, and refused with
 //!   `LW_RESULT_INVALID_ARGUMENT` wherever it is not.
+#![warn(missing_docs)]
 #![allow(clippy::missing_safety_doc)] // the header documents each function's contract
 
 use license_worker_client::{Error, FileStorage, LicenseClient, Options, Status, Storage, StoredLicence};
@@ -58,6 +59,7 @@ pub enum LwState {
 #[repr(C)]
 #[derive(Debug)]
 pub struct LwStatus {
+    /// Valid, grace, inactive or revoked.
     pub state: LwState,
     /// `LW_STATE_VALID` or `LW_STATE_GRACE`: open the app.
     pub unlocked: bool,
@@ -82,12 +84,17 @@ pub struct LwConfig {
     pub key_ids: *const *const c_char,
     /// The public keys (base64), in the same order as `key_ids`. Embed both keys your server publishes.
     pub public_keys: *const *const c_char,
+    /// How many entries `key_ids` and `public_keys` have. Give 2: with only the active key,
+    /// every licence signed after a key rotation fails to verify (nothing locks, but an
+    /// expiring licence runs out). 1 is only for tests.
     pub key_count: usize,
     /// Accept only licences of these products; none (0) accepts any.
     pub product_ids: *const i64,
+    /// How many entries `product_ids` has.
     pub product_count: usize,
     /// Accept only licences of these variants; none (0) accepts any.
     pub variant_ids: *const i64,
+    /// How many entries `variant_ids` has.
     pub variant_count: usize,
     /// Shown in the admin page next to the activation; NULL: this computer's name.
     pub instance_name: *const c_char,
@@ -362,7 +369,7 @@ pub extern "C" fn lw_default_instance_name() -> *mut c_char {
     catch_unwind(license_worker_client::default_instance_name).map_or(ptr::null_mut(), |s| to_c(&s))
 }
 
-/// The library's version, e.g. "0.1.0". Static: do not free.
+/// The library's version, the same text as `LW_VERSION_STRING` in the header. Static: do not free.
 #[no_mangle]
 pub extern "C" fn lw_version() -> *const c_char {
     concat!(env!("CARGO_PKG_VERSION"), "\0").as_ptr().cast()

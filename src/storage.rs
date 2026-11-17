@@ -23,6 +23,7 @@ pub struct StoredLicence {
 /// A store that cannot be read should answer `None` from `load`; the app then
 /// shows as not activated, and an activation writes it again.
 pub trait Storage {
+    /// The stored licence, or `None` when there is none (or it cannot be read).
     fn load(&self) -> Option<StoredLicence>;
     /// `None` forgets the licence. Forgetting what is not there is not an error.
     fn save(&self, value: Option<&StoredLicence>) -> io::Result<()>;
@@ -63,10 +64,12 @@ pub struct FileStorage {
 }
 
 impl FileStorage {
+    /// Storage in the JSON file at `path`. Nothing is read or written until it is used.
     pub fn new(path: impl Into<PathBuf>) -> Self {
         FileStorage { path: path.into() }
     }
 
+    /// The file it uses.
     pub fn path(&self) -> &std::path::Path {
         &self.path
     }
@@ -104,6 +107,7 @@ pub struct MemoryStorage {
 }
 
 impl MemoryStorage {
+    /// Storage that starts out holding `value`.
     pub fn new(value: Option<StoredLicence>) -> Self {
         MemoryStorage { value: Mutex::new(value) }
     }

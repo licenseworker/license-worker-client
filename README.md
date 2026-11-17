@@ -10,7 +10,7 @@ For desktop apps on **Windows**, macOS and Linux, and for the Rust side of a
 
 ```toml
 [dependencies]
-license-worker-client = { git = "https://github.com/licenseworker/license-worker-client", tag = "v0.3.0", features = ["keyring"] }
+license-worker-client = { git = "https://github.com/licenseworker/license-worker-client", tag = "v0.3.1", features = ["keyring"] }
 ```
 
 ## Quick start

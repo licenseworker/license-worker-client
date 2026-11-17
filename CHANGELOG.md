@@ -4,6 +4,32 @@ All notable changes to this crate are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the crate follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-11-17
+
+### Fixed
+
+- **Rust client: a quiet re-activation could lock a paying user.** After
+  `instance_id not found.`, `check()` adopted the new instance before its licence
+  was verified. When the server's answer had no licence, or one that did not
+  verify, the stored licence was then judged against the new instance and failed
+  as `wrong_instance`, also offline. The new instance and its licence are now
+  adopted only when that licence verifies; otherwise the new seat is given back
+  and the app is judged by the licence it held. A signed revocation still locks.
+- **Swift: the latest time seen survives a new activation**, and the activation
+  is judged against it, as in the Rust client. The mark also moves forward at
+  launch, not only when the server is asked.
+
+### Changed
+
+- `rust-version = "1.88"`, the lowest the locked dependencies allow; CI builds on it.
+- Every public item is documented (`#![warn(missing_docs)]`), including why both
+  public keys must be given (Rust, Swift and C).
+- The C header has `LW_VERSION_MAJOR`, `LW_VERSION_MINOR`, `LW_VERSION_PATCH` and
+  `LW_VERSION_STRING`.
+- The `check:clients` command moved to `cli/`, a workspace crate that is not
+  published: installing the crate no longer installs a test binary.
+- A release runs the Rust and Swift tests before it tags anything.
+
 ## [0.3.0] - 2026-11-17
 
 ### Added
@@ -98,6 +124,7 @@ docs, packaged as one crate.
 - The `license-worker-client` command, in the contract License Worker's
   `npm run check:clients` drives.
 
+[0.3.1]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.3.1
 [0.3.0]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.3.0
 [0.2.1]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.2.1
 [0.2.0]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.2.0

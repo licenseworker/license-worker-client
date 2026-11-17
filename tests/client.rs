@@ -193,6 +193,54 @@ fn a_released_activation_is_replaced_quietly() {
     assert_eq!(stored.token, licence("i-2"));
 }
 
+/// The quiet re-activation took a seat but brought no licence this app can use:
+/// nothing stored changes, the app stays open on the licence it held, and the
+/// new seat is given back.
+fn reactivation_without_a_usable_licence(answer: fn() -> Result<license_worker_client::HttpResponse, license_worker_client::TransportError>) {
+    let storage = held("i-1");
+    let server = Arc::new(Scripted::new(move |action, f| match action {
+        "validate" => reply(404, json!({"valid": false, "error": "instance_id not found."})),
+        "activate" => answer(),
+        "deactivate" => {
+            assert_eq!(f["instance_id"], "i-2", "the NEW seat is given back");
+            reply(200, json!({"deactivated": true}))
+        }
+        _ => unreachable!(),
+    }));
+    let c = client(&server, &storage);
+    let s = c.check();
+    assert!(open_offline(&s), "{s:?}");
+    assert_eq!(server.actions(), ["validate", "activate", "deactivate"]);
+    let stored = storage.load().unwrap();
+    assert_eq!((stored.instance_id.as_str(), stored.token.as_str()), ("i-1", licence("i-1").as_str()), "the held licence is kept as it was");
+    assert!(open_offline(&c.check_offline()), "and it still opens offline afterwards");
+}
+
+#[test]
+fn a_reactivation_without_a_token_keeps_the_held_licence_and_gives_the_seat_back() {
+    reactivation_without_a_usable_licence(|| reply(200, json!({"activated": true, "error": null, "instance": {"id": "i-2"}})));
+}
+
+#[test]
+fn a_reactivation_with_a_token_that_does_not_verify_keeps_the_held_licence_and_gives_the_seat_back() {
+    reactivation_without_a_usable_licence(|| {
+        activated("i-2", sign(&Licence { key: &K9, typ: "license", product_id: PRODUCT, instance_id: Some("i-2"), exp: None }))
+    });
+    // A licence of another product is no better.
+    reactivation_without_a_usable_licence(|| activated("i-2", sign(&Licence { key: &K1, typ: "license", product_id: 1, instance_id: Some("i-2"), exp: None })));
+}
+
+#[test]
+fn a_signed_revocation_during_reactivation_locks() {
+    let storage = held("i-1");
+    let server = Arc::new(Scripted::new(|action, _| match action {
+        "validate" => reply(404, json!({"valid": false, "error": "instance_id not found."})),
+        _ => reply(400, json!({"activated": false, "error": "This license key is disabled.", "instance": null, "token": revocation()})),
+    }));
+    assert_eq!(client(&server, &storage).check(), Status::Revoked { reason: Some("disabled".into()) });
+    assert!(storage.load().is_none());
+}
+
 #[test]
 fn a_released_activation_that_cannot_be_replaced_is_judged_by_the_stored_licence() {
     let storage = held("i-1");

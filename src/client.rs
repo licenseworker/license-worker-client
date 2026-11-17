@@ -9,11 +9,17 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 /// The server's message when it no longer knows an activation.
 const INSTANCE_NOT_FOUND: &str = "instance_id not found.";
 
+/// How a [`LicenseClient`] reaches and judges your server. `Default` fills in
+/// everything but `server_url` and `public_keys`.
 #[derive(Debug, Clone)]
 pub struct Options {
     /// The server's address, e.g. `"https://license.example.com"`.
     pub server_url: String,
     /// Both public keys your server publishes, kid -> base64. Embed both, so a rotation does not lock anyone out.
+    ///
+    /// **Give two.** With only the active key, every licence the server signs after it
+    /// moves to the backup key fails as `unknown_kid`: nothing locks, but nothing new
+    /// verifies either, and an expiring licence runs out. One key is only for tests.
     pub public_keys: HashMap<String, String>,
     /// Accept only licences of these products (`None`: any).
     pub product_ids: Option<Vec<i64>>,
@@ -45,17 +51,35 @@ impl Default for Options {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "state", rename_all = "lowercase")]
 pub enum Status {
-    /// A licence in force. `offline`: judged from the stored licence, the server did not answer.
-    Valid { expires: Option<i64>, offline: bool },
+    /// A licence in force.
+    Valid {
+        /// When it expires, unix seconds; `None` is perpetual.
+        expires: Option<i64>,
+        /// Judged from the stored licence: the server did not answer.
+        offline: bool,
+    },
     /// Expired, inside the grace period: open, and a good moment to ask the user to renew.
-    Grace { expires: Option<i64>, offline: bool },
-    /// Not activated, or the stored licence is no longer usable (`reason` says why).
-    Inactive { reason: Option<String> },
+    Grace {
+        /// When it expired, unix seconds.
+        expires: Option<i64>,
+        /// Judged from the stored licence: the server did not answer.
+        offline: bool,
+    },
+    /// Not activated, or the stored licence is no longer usable.
+    Inactive {
+        /// Why the stored licence is not usable (a [`Failure`](crate::Failure) name such as
+        /// `"expired"`), or `None` when nothing is activated.
+        reason: Option<String>,
+    },
     /// The server signed a revocation of this key. The stored licence is forgotten.
-    Revoked { reason: Option<String> },
+    Revoked {
+        /// The server's reason: `"disabled"`, `"refunded"` or `"expired"`.
+        reason: Option<String>,
+    },
 }
 
 impl Status {
+    /// Whether the app should open: [`Status::Valid`] or [`Status::Grace`], online or offline.
     pub fn unlocked(&self) -> bool {
         matches!(self, Status::Valid { .. } | Status::Grace { .. })
     }
@@ -132,6 +156,8 @@ pub struct LicenseClient<S: Storage, T: Transport = UreqTransport> {
 }
 
 impl<S: Storage> LicenseClient<S, UreqTransport> {
+    /// A client over HTTPS (`ureq`), with `o.timeout` per request. Makes no request yet.
+    /// Pass both of your server's public keys in `o.public_keys` (see [`Options::public_keys`]).
     pub fn new(o: Options, storage: S) -> Self {
         let transport = UreqTransport::new(o.timeout);
         Self::with_transport(o, storage, transport)
@@ -150,10 +176,12 @@ impl<S: Storage, T: Transport> LicenseClient<S, T> {
         self
     }
 
+    /// The options it was made with.
     pub fn options(&self) -> &Options {
         &self.o
     }
 
+    /// The storage it keeps the licence in.
     pub fn storage(&self) -> &S {
         &self.storage
     }
@@ -227,14 +255,30 @@ impl<S: Storage, T: Transport> LicenseClient<S, T> {
         if v.as_ref().is_some_and(|a| a.status == 404 && a.error() == Some(INSTANCE_NOT_FOUND)) {
             let a = self.call("activate", &[("license_key", &s.key), ("instance_name", &self.o.instance_name)]);
             v = match a {
-                Some(a) if a.flag("activated") => match a.instance_id() {
-                    Some(id) => {
-                        s.instance_id = id;
-                        Some(a)
+                Some(a) if a.flag("activated") => {
+                    // The new seat is adopted only with a licence for it that verifies. Until
+                    // then nothing stored changes: the old instance and token stay.
+                    let Some(new_id) = a.instance_id() else { return self.judge_held(s) };
+                    let mut candidate = StoredLicence { instance_id: new_id.clone(), ..s.clone() };
+                    let verdict = a.token().map(|t| (self.check_token(&t, &candidate), t));
+                    match verdict {
+                        Some((r @ Ok(Verified::Valid(_) | Verified::Grace(_)), token)) => {
+                            candidate.token = token;
+                            let _ = self.storage.save(Some(&candidate));
+                            return Self::status(r, false);
+                        }
+                        Some((r @ Ok(Verified::Revoked(_)), _)) => {
+                            let _ = self.storage.save(None);
+                            return Self::status(r, false);
+                        }
+                        _ => {
+                            // A seat with no licence this app can use: give it back, judge by the old one.
+                            let _ = self.call("deactivate", &[("license_key", &s.key), ("instance_id", &new_id)]);
+                            return self.judge_held(s);
+                        }
                     }
-                    None => None,
-                },
-                other => other, // e.g. the activation limit: judged below like any other answer
+                }
+                other => other, // e.g. the activation limit or a signed revocation: judged below like any other answer
             };
         }
 
@@ -253,7 +297,12 @@ impl<S: Storage, T: Transport> LicenseClient<S, T> {
                 Err(_) => {}
             }
         }
-        // No answer, or an answer without a usable signed licence: judge by the one already held.
+        self.judge_held(s)
+    }
+
+    /// No answer, or an answer without a usable signed licence: judge by the one already held
+    /// (saving the advanced high-water mark).
+    fn judge_held(&self, s: StoredLicence) -> Status {
         let _ = self.storage.save(Some(&s));
         Self::status(self.check_token(&s.token, &s), true)
     }

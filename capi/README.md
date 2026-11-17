@@ -58,7 +58,6 @@ cargo build --release -p license-worker-client-capi --features keyring
 | Windows ARM64 | same, `--target aarch64-pc-windows-msvc` | same |
 | macOS universal | `cargo build` for `aarch64-apple-darwin` and `x86_64-apple-darwin` with `MACOSX_DEPLOYMENT_TARGET` set, then `lipo -create` | `liblicense_worker.a -framework Security -framework CoreFoundation -liconv` |
 | Linux | `cargo build --release -p license-worker-client-capi` | `liblicense_worker.a -lpthread -ldl -lm` (and `-ldbus-1` with `keyring`) |
-
 | iOS, iOS Simulator, macOS | `capi/build-apple.sh [--keyring]`: one `LicenseWorker.xcframework` | `-framework Security -framework CoreFoundation -liconv` |
 
 The CMake file does the Windows, macOS and Linux rows: `-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"`

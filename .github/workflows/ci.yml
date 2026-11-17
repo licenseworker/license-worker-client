@@ -125,6 +125,17 @@ jobs:
           xcrun --sdk iphonesimulator clang -arch arm64 -arch x86_64 -mios-simulator-version-min=13.0 -I $X/ios-arm64_x86_64-simulator/Headers examples/c/lw_cli.c $X/ios-arm64_x86_64-simulator/liblicense_worker.a $LIBS -o lw_cli_iossim
           lipo -info lw_cli_ios lw_cli_iossim
 
+  # The rust-version in Cargo.toml, built for real.
+  msrv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@1.88
+      - run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --workspace --all-targets --all-features
+
   # LicenseWorkerKit: the Swift package at the repository root.
   swift:
     runs-on: macos-latest

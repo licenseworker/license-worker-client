@@ -1,0 +1,16 @@
+[package]
+name = "license-worker-client-cli"
+version = "0.3.1"
+edition = "2021"
+rust-version = "1.88"
+license = "MIT"
+description = "The client as a command, for License Worker's end-to-end check (npm run check:clients). Not an end-user tool."
+publish = false
+
+[[bin]]
+name = "license-worker-client"
+path = "src/main.rs"
+
+[dependencies]
+license-worker-client = { path = ".." }
+serde_json = "1"
