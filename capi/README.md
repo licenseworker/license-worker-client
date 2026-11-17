@@ -33,7 +33,7 @@ cargo build --release -p license-worker-client-capi --features keyring
 
 | Platform | Build | Link with |
 |---|---|---|
-| Windows x64 | `cargo build --release -p license-worker-client-capi --target x86_64-pc-windows-msvc` | `license_worker.lib kernel32 ntdll userenv ws2_32 dbghelp advapi32 secur32 crypt32 bcrypt ncrypt` |
+| Windows x64 | `cargo build --release -p license-worker-client-capi --target x86_64-pc-windows-msvc` | `license_worker.lib kernel32 ntdll userenv ws2_32 dbghelp synchronization advapi32 secur32 crypt32 bcrypt ncrypt` |
 | Windows ARM64 | same, `--target aarch64-pc-windows-msvc` | same |
 | macOS universal | `cargo build` for `aarch64-apple-darwin` and `x86_64-apple-darwin` with `MACOSX_DEPLOYMENT_TARGET` set, then `lipo -create` | `liblicense_worker.a -framework Security -framework CoreFoundation -liconv` |
 | Linux | `cargo build --release -p license-worker-client-capi` | `liblicense_worker.a -lpthread -ldl -lm` (and `-ldbus-1` with `keyring`) |
@@ -55,6 +55,10 @@ module map, so C, C++, Objective-C and Swift (`import LicenseWorker`) all use
 it. With `--keyring` the licence can live in the Keychain on both. On iOS the
 licence is kept per app: set `cfg.keyring_service`, or a `storage_path` inside
 the app's container.
+
+The exact list depends on the Rust version: `cargo rustc --release -p
+license-worker-client-capi --crate-type staticlib -- --print native-static-libs`
+prints it for yours.
 
 **Windows C runtime.** Plugins usually build with the static CRT (`/MT`).
 Rust links the DLL CRT unless told otherwise; build it with

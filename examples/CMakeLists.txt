@@ -37,7 +37,7 @@ if(MSVC)
   set(LW_STATIC "${LW_LIB_DIR}/license_worker.lib")
   # What `cargo rustc --print native-static-libs` lists, with the system libraries
   # keyring's Credential Manager calls need in place of windows-targets' import lib.
-  set(LW_SYSTEM_LIBS kernel32 ntdll userenv ws2_32 dbghelp advapi32 secur32 crypt32 bcrypt ncrypt)
+  set(LW_SYSTEM_LIBS kernel32 ntdll userenv ws2_32 dbghelp synchronization advapi32 secur32 crypt32 bcrypt ncrypt)
 else()
   set(LW_STATIC "${LW_LIB_DIR}/liblicense_worker.a")
   if(APPLE)

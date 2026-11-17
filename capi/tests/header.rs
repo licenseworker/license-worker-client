@@ -8,7 +8,8 @@ fn header_is_current() {
     let config = cbindgen::Config::from_file(dir.join("cbindgen.toml")).unwrap();
     let mut out = Vec::new();
     cbindgen::Builder::new().with_crate(dir).with_config(config).generate().expect("cbindgen").write(&mut out);
-    let generated = String::from_utf8(out).unwrap();
+    // Line endings are not content: cbindgen and git may both write CRLF on Windows.
+    let generated = String::from_utf8(out).unwrap().replace("\r\n", "\n");
     let path = dir.join("include/license_worker.h");
     if std::env::var_os("UPDATE_HEADER").is_some() {
         std::fs::write(&path, &generated).unwrap();
