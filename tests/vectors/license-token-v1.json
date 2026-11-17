@@ -1,0 +1,420 @@
+{
+  "description": "Shared test vectors for the signed licence. token = 'v1.' + b64url(payload JSON) + '.' + b64url(signature); the signature is Ed25519 over the ASCII bytes of 'v1.' + b64url(payload JSON). base64url has no padding. Payload JSON field order: v, kid, typ, key_hash, store_id, product_id, variant_id, instance_id, iat, exp, reason (reason only when revoked), no whitespace.",
+  "warning": "TEST KEYS ONLY. The seeds below are published throwaway keys and must never sign a real licence.",
+  "key_format": "seed_b64 = base64 of the 32-byte Ed25519 seed (CryptoKit rawRepresentation). public_key_b64 = base64 of the raw 32-byte public key.",
+  "keys": {
+    "k-test-1": {
+      "seed_b64": "mpZYGxpSo79bCr+O9bl88ij3nsGHghlEhLZBVGl1toc=",
+      "public_key_b64": "MwhKI3s/ZgWNKaAhSHr9JM8YjI5bEuFREV5QcIWDJiY="
+    },
+    "k-test-2": {
+      "seed_b64": "8IcDKAFP3zBH/KCp7FxPZyD/LiN4kvrY4Opthyq/hqw=",
+      "public_key_b64": "MHTLL2mbYkq6vfQO/O9AEAMtLeEseiyWCb5sOq+ZDGc="
+    },
+    "k-test-9": {
+      "seed_b64": "llqL0IjPcgfSHx4KoH3BDAqaZWokcQdnQTOelFKUCu0=",
+      "public_key_b64": "mE9XcsXyrsZIW93quybn6qxSqsZLvGP/tdv9NSucvoc="
+    }
+  },
+  "trusted_kids": [
+    "k-test-1",
+    "k-test-2"
+  ],
+  "license_key": "38b1460a-5104-4067-a91d-77b872934d51",
+  "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+  "key_hash_rule": "sha256 hex of the licence key with all whitespace removed and lowercased",
+  "default_grace_seconds": 1209600,
+  "rules": [
+    "Verify the signature before trusting any payload field; kid only selects the embedded key.",
+    "typ=revoked verifies to state 'revoked' whatever the instance: it is about the key.",
+    "A changed payload may fail as malformed JSON before the signature is checked; where a case lists also_acceptable, any of those reasons is a correct rejection.",
+    "exp=null is perpetual and ignores the clock. Otherwise now=max(now, high_water_mark); valid until exp, grace until exp+grace, then expired."
+  ],
+  "cases": [
+    {
+      "name": "perpetual licence",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.FzKaq3kvIpRuyHKa-X3fgUiYRJXWh7c7NA_VoUwJEVAMRH6YjtXC04mDFgLTiZK5OWokE3ZyEweB9G8o-u3sBA",
+      "payload": {
+        "v": 1,
+        "kid": "k-test-1",
+        "typ": "license",
+        "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+        "store_id": 100200,
+        "product_id": 4100105,
+        "variant_id": 5100105,
+        "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17",
+        "iat": 1796126400,
+        "exp": null
+      },
+      "signed_with": "k-test-1",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "state": "valid"
+      }
+    },
+    {
+      "name": "signed with the backup key (rotation)",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMiIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.aRamDcwhfiCuYyLdRy-iF6vCt2MqcyLQW2z7TuA1_Ujr3dk2Y9LqplKX3WfpX6h51RUfChrtOEq7rwWDzz3yCg",
+      "payload": {
+        "v": 1,
+        "kid": "k-test-2",
+        "typ": "license",
+        "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+        "store_id": 100200,
+        "product_id": 4100105,
+        "variant_id": 5100105,
+        "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17",
+        "iat": 1796126400,
+        "exp": null
+      },
+      "signed_with": "k-test-2",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "state": "valid"
+      }
+    },
+    {
+      "name": "signed with a key the app does not embed",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtOSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.CBCtLpKRWJxf32GLGM1CskEqzEdkxpLULD2BTvCrTjJBWHA5c4rpVYYF7f9F5iglGjdEF82NHpkLHy6olXrZBA",
+      "payload": {
+        "v": 1,
+        "kid": "k-test-9",
+        "typ": "license",
+        "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+        "store_id": 100200,
+        "product_id": 4100105,
+        "variant_id": 5100105,
+        "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17",
+        "iat": 1796126400,
+        "exp": null
+      },
+      "signed_with": "k-test-9",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": false,
+        "reason": "unknown_kid"
+      }
+    },
+    {
+      "name": "claims a trusted kid but signed with another key",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.gCknglwwbHaabM_bQfpMTBcv0du9h4Zi5Lip62PqGH7tsRht4T5i5AmkH1yORyQYMbBJLEqSjAtlPsNowmiACQ",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": false,
+        "reason": "bad_signature"
+      }
+    },
+    {
+      "name": "one character of the payload changed",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MAAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.FzKaq3kvIpRuyHKa-X3fgUiYRJXWh7c7NA_VoUwJEVAMRH6YjtXC04mDFgLTiZK5OWokE3ZyEweB9G8o-u3sBA",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": false,
+        "reason": "malformed",
+        "also_acceptable": [
+          "bad_signature",
+          "unknown_kid"
+        ]
+      }
+    },
+    {
+      "name": "one character of the signature changed",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.FzKaq3kvIpRuyHKa-X3fgUiYRJXWh7c7NA_VoUwJEVAARH6YjtXC04mDFgLTiZK5OWokE3ZyEweB9G8o-u3sBA",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": false,
+        "reason": "bad_signature"
+      }
+    },
+    {
+      "name": "licence of another product",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA4LCJ2YXJpYW50X2lkIjo1MTAwMTA4LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.hO7nUYauuo7Jha4dgT7SVyR8gW_CMnzzRuS7Twgx16Ie15xhdqXXQYVG3N1ZTPiUMFNityjvWvCMTvCFB-0VDw",
+      "payload": {
+        "v": 1,
+        "kid": "k-test-1",
+        "typ": "license",
+        "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+        "store_id": 100200,
+        "product_id": 4100108,
+        "variant_id": 5100108,
+        "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17",
+        "iat": 1796126400,
+        "exp": null
+      },
+      "signed_with": "k-test-1",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": false,
+        "reason": "wrong_product"
+      }
+    },
+    {
+      "name": "licence of another instance",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6ImY5MGVjMzcwLWZkODMtNDZhNS04YmJkLTQ0YTI0MWU3ODY2NSIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.c12NnJY-zsHjPwJmrFFETobSF9fS6UTgYdF5s6VU8K64bx8rQ6qy9fUz3SKd1OPzME2hNMC_0d7PO9tEP3gtAw",
+      "payload": {
+        "v": 1,
+        "kid": "k-test-1",
+        "typ": "license",
+        "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+        "store_id": 100200,
+        "product_id": 4100105,
+        "variant_id": 5100105,
+        "instance_id": "f90ec370-fd83-46a5-8bbd-44a241e78665",
+        "iat": 1796126400,
+        "exp": null
+      },
+      "signed_with": "k-test-1",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": false,
+        "reason": "wrong_instance"
+      }
+    },
+    {
+      "name": "subscription, before expiry",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjoxNzk4NzYxNjAwfQ.auQEzUdOQN1nEPLhlrBvWofeq77mmLatLtFYB-2wd7Al8HubIuBz8kfFetK-IW4Vc-rteiNNqJyhs3RrJXAUCA",
+      "payload": {
+        "v": 1,
+        "kid": "k-test-1",
+        "typ": "license",
+        "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+        "store_id": 100200,
+        "product_id": 4100105,
+        "variant_id": 5100105,
+        "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17",
+        "iat": 1796126400,
+        "exp": 1798761600
+      },
+      "signed_with": "k-test-1",
+      "verify": {
+        "now": "2026-12-20T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "state": "valid"
+      }
+    },
+    {
+      "name": "subscription, expired but inside the 14-day grace",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjoxNzk4NzYxNjAwfQ.auQEzUdOQN1nEPLhlrBvWofeq77mmLatLtFYB-2wd7Al8HubIuBz8kfFetK-IW4Vc-rteiNNqJyhs3RrJXAUCA",
+      "verify": {
+        "now": "2027-01-10T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "state": "grace"
+      }
+    },
+    {
+      "name": "subscription, past the grace",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjoxNzk4NzYxNjAwfQ.auQEzUdOQN1nEPLhlrBvWofeq77mmLatLtFYB-2wd7Al8HubIuBz8kfFetK-IW4Vc-rteiNNqJyhs3RrJXAUCA",
+      "verify": {
+        "now": "2027-01-15T00:00:01Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": false,
+        "reason": "expired"
+      }
+    },
+    {
+      "name": "subscription past the grace, clock set back: the high-water mark still expires it",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjoxNzk4NzYxNjAwfQ.auQEzUdOQN1nEPLhlrBvWofeq77mmLatLtFYB-2wd7Al8HubIuBz8kfFetK-IW4Vc-rteiNNqJyhs3RrJXAUCA",
+      "verify": {
+        "now": "2026-12-20T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        },
+        "high_water_mark": "2027-02-01T00:00:00Z"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "expired"
+      }
+    },
+    {
+      "name": "perpetual licence, clock set back before it was issued",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.FzKaq3kvIpRuyHKa-X3fgUiYRJXWh7c7NA_VoUwJEVAMRH6YjtXC04mDFgLTiZK5OWokE3ZyEweB9G8o-u3sBA",
+      "verify": {
+        "now": "2020-01-01T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "state": "valid"
+      }
+    },
+    {
+      "name": "perpetual licence, clock set far forward",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6ImxpY2Vuc2UiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsfQ.FzKaq3kvIpRuyHKa-X3fgUiYRJXWh7c7NA_VoUwJEVAMRH6YjtXC04mDFgLTiZK5OWokE3ZyEweB9G8o-u3sBA",
+      "verify": {
+        "now": "2040-01-01T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "state": "valid"
+      }
+    },
+    {
+      "name": "signed revocation",
+      "token": "v1.eyJ2IjoxLCJraWQiOiJrLXRlc3QtMSIsInR5cCI6InJldm9rZWQiLCJrZXlfaGFzaCI6Ijk1ZDFjZWJjMzlmYzdkZDU5NDVmN2ExMGVjYWMzNGZmOTI2NTkzOTYyYjYzYzEzMzRhODM2MjM1ZGU1OGNhZmUiLCJzdG9yZV9pZCI6MTAwMjAwLCJwcm9kdWN0X2lkIjo0MTAwMTA1LCJ2YXJpYW50X2lkIjo1MTAwMTA1LCJpbnN0YW5jZV9pZCI6IjQ3NTk2YWQ5LWE4MTEtNGViZi1hYzhhLTAzZmM3YjZkMmExNyIsImlhdCI6MTc5NjEyNjQwMCwiZXhwIjpudWxsLCJyZWFzb24iOiJyZWZ1bmRlZCJ9.qsPRSoUNgcz1Ux445PEblFUE34Nl82XlilQ5IV3520fuq_vc0fTBmZRAK1UV7_8FvZPgE3Z2atjrg1G2FviCAw",
+      "payload": {
+        "v": 1,
+        "kid": "k-test-1",
+        "typ": "revoked",
+        "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+        "store_id": 100200,
+        "product_id": 4100105,
+        "variant_id": 5100105,
+        "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17",
+        "iat": 1796126400,
+        "exp": null,
+        "reason": "refunded"
+      },
+      "signed_with": "k-test-1",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": true,
+        "state": "revoked"
+      }
+    },
+    {
+      "name": "not a token",
+      "token": "v1.not-a-token",
+      "verify": {
+        "now": "2026-12-02T00:00:00Z",
+        "expect": {
+          "key_hash": "95d1cebc39fc7dd5945f7a10ecac34ff926593962b63c1334a836235de58cafe",
+          "variant_ids": [
+            5100105
+          ],
+          "instance_id": "47596ad9-a811-4ebf-ac8a-03fc7b6d2a17"
+        }
+      },
+      "expected": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    }
+  ]
+}
