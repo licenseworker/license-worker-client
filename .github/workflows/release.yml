@@ -22,7 +22,8 @@ permissions:
   contents: read
 
 env:
-  CARGO_TERM_COLOR: always
+  # Plain text: link-libs.txt is copied from rustc's output, and colour codes would end up in it.
+  CARGO_TERM_COLOR: never
   TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
@@ -57,7 +58,7 @@ jobs:
           d=target/${{ matrix.target }}/release
           cp $d/license_worker.lib $d/license_worker.dll $d/license_worker.dll.lib pkg/$name/lib/
           { echo "# Static: link license_worker.lib with these (MSVC, /${{ matrix.crt }} C runtime):";
-            grep -o 'native-static-libs: .*' build.log | sed 's/native-static-libs: //' | tail -1; } > pkg/$name/link-libs.txt
+            grep -o 'native-static-libs: .*' build.log | sed -e 's/native-static-libs: //' -e 's/\x1b\[[0-9;]*m//g' | tail -1; } > pkg/$name/link-libs.txt
           cp capi/README.md LICENSE pkg/$name/
           cd pkg && 7z a -tzip ../$name.zip $name > /dev/null
       - uses: actions/upload-artifact@v4
@@ -100,7 +101,7 @@ jobs:
           lipo -create target/{aarch64,x86_64}-apple-darwin/release/liblicense_worker.dylib -output pkg/$name/lib/liblicense_worker.dylib
           codesign -f -s - pkg/$name/lib/liblicense_worker.dylib
           { echo "# Static: link liblicense_worker.a with these (macOS 11.0+, arm64 and x86_64):";
-            grep -o 'native-static-libs: .*' build-aarch64-apple-darwin.log | sed 's/native-static-libs: //' | tail -1; } > pkg/$name/link-libs.txt
+            grep -o 'native-static-libs: .*' build-aarch64-apple-darwin.log | sed -e 's/native-static-libs: //' -e 's/\x1b\[[0-9;]*m//g' | tail -1; } > pkg/$name/link-libs.txt
           cp capi/README.md LICENSE pkg/$name/
           # Prove both libraries link and run, as a user would link them.
           cc -O2 -arch arm64 -arch x86_64 -I pkg/$name/include examples/c/lw_cli.c pkg/$name/lib/liblicense_worker.a $(tail -1 pkg/$name/link-libs.txt) -o lw_static
@@ -141,7 +142,7 @@ jobs:
           cp capi/include/license_worker.h pkg/$name/include/
           cp target/release/liblicense_worker.a target/release/liblicense_worker.so pkg/$name/lib/
           { echo "# Static: link liblicense_worker.a with these (glibc, x86_64; built without the keyring feature):";
-            grep -o 'native-static-libs: .*' build.log | sed 's/native-static-libs: //' | tail -1; } > pkg/$name/link-libs.txt
+            grep -o 'native-static-libs: .*' build.log | sed -e 's/native-static-libs: //' -e 's/\x1b\[[0-9;]*m//g' | tail -1; } > pkg/$name/link-libs.txt
           cp capi/README.md LICENSE pkg/$name/
           cc -O2 -I pkg/$name/include examples/c/lw_cli.c pkg/$name/lib/liblicense_worker.a $(tail -1 pkg/$name/link-libs.txt) -o lw_static
           examples/c/smoke.sh ./lw_static
