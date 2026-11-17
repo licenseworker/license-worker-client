@@ -8,10 +8,12 @@ signed Ed25519 licence stored on the device.
 For desktop apps on **Windows**, macOS and Linux, and for the Rust side of a
 **Tauri** app. Blocking (`ureq` 2), no async runtime. MIT.
 
-```toml
-[dependencies]
-license-worker-client = { git = "https://github.com/licenseworker/license-worker-client", tag = "v0.3.1", features = ["keyring"] }
+```sh
+cargo add license-worker-client --features keyring
 ```
+
+On [crates.io](https://crates.io/crates/license-worker-client), with the API
+documentation on [docs.rs](https://docs.rs/license-worker-client).
 
 ## Quick start
 
