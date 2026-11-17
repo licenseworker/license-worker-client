@@ -1,6 +1,6 @@
 [package]
 name = "license-worker-client-capi"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 description = "C ABI for license-worker-client, for C and C++ apps and audio plugins"
@@ -17,7 +17,7 @@ default = []
 keyring = ["license-worker-client/keyring"]
 
 [dependencies]
-license-worker-client = { path = "..", version = "0.2.0" }
+license-worker-client = { path = "..", version = "0.2.1" }
 
 [dev-dependencies]
 cbindgen = { version = "0.29", default-features = false }

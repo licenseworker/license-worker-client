@@ -4,6 +4,25 @@ All notable changes to this crate are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the crate follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-11-17
+
+### Added
+
+- Swift Package Manager: add this repository in Xcode and `import LicenseWorker`
+  (iOS 13+, macOS 11+). `Package.swift` is written by the release, with the
+  checksum of the XCFramework attached to that release.
+- A Linux ARM64 (aarch64, glibc) package on each release.
+- `PROTOCOL.md`: the three calls, the signed licence, the verification steps
+  and the client rules, so anyone can run a compatible server or write a
+  compatible client.
+- `SECURITY.md`: how to report a security problem privately.
+
+### Changed
+
+- Releases are started by hand with the version (Actions > Release), which
+  builds everything, then commits `Package.swift` and makes the tag.
+- The workflows use actions that run on Node 24.
+
 ## [0.2.0] - 2026-11-17
 
 ### Added
@@ -49,5 +68,6 @@ docs, packaged as one crate.
 - The `license-worker-client` command, in the contract License Worker's
   `npm run check:clients` drives.
 
+[0.2.1]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.2.1
 [0.2.0]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.2.0
 [0.1.0]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.1.0

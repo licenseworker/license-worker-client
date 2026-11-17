@@ -10,7 +10,7 @@ For desktop apps on **Windows**, macOS and Linux, and for the Rust side of a
 
 ```toml
 [dependencies]
-license-worker-client = { git = "https://github.com/licenseworker/license-worker-client", tag = "v0.2.0", features = ["keyring"] }
+license-worker-client = { git = "https://github.com/licenseworker/license-worker-client", tag = "v0.2.1", features = ["keyring"] }
 ```
 
 ## Quick start
@@ -172,8 +172,17 @@ cbindgen header (`capi/include/license_worker.h`), opaque handles and no
 panics across the boundary, for C++ apps and VST3, AU, AAX and CLAP plugins.
 Plugins link it **statically**. It builds for Windows x64 and ARM64 (MSVC,
 static CRT supported), as a universal macOS library, and as one XCFramework
-for iOS, the iOS Simulator and macOS (`capi/build-apple.sh`); the C example
-passes the same end-to-end check as the Rust client.
+for iOS, the iOS Simulator and macOS, which Swift Package Manager installs
+(`import LicenseWorker`). Prebuilt packages for every platform are on each
+[GitHub Release](https://github.com/licenseworker/license-worker-client/releases);
+the C example passes the same end-to-end check as the Rust client.
+
+## The protocol
+
+[`PROTOCOL.md`](PROTOCOL.md) describes what a server must answer and how a
+signed licence is checked. License Worker is the reference server, but any
+server that follows it works with this client, and any client that follows it
+works with License Worker.
 
 ## Only the verifier
 

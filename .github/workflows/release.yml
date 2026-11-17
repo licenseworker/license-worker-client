@@ -1,22 +1,31 @@
 name: Release
 
-# On a version tag: builds the C interface for every platform and attaches the
-# packages to the GitHub Release of that tag. Each package holds
-# include/license_worker.h, the libraries, link-libs.txt (what to link with,
-# from rustc itself), README.md and LICENSE.
+# Run by hand (Actions > Release > Run workflow) with the version to release.
+#
+# New version (no tag yet): checks that Cargo.toml and CHANGELOG.md say that
+# version, builds every package from main, and only when all of them built,
+# writes Package.swift with the XCFramework's checksum, commits it, tags that
+# commit v<version>, and publishes the GitHub Release. Swift Package Manager
+# reads Package.swift from the tag, so the tag must be made here, after the
+# build: do not push release tags by hand.
+#
+# Existing tag (e.g. v0.2.0): builds from the tag and adds the packages the
+# Release does not have yet. Assets already there are never replaced: the
+# XCFramework's checksum may be recorded in that tag's Package.swift.
+#
+# Each package holds include/license_worker.h, the libraries, link-libs.txt
+# (what to link with, from rustc itself), README.md and LICENSE.
 
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Existing tag to (re)build the release for, e.g. v0.2.0"
+      version:
+        description: "Version to release, without the v (e.g. 0.2.1)"
         required: true
 
 concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: true
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -24,10 +33,37 @@ permissions:
 env:
   # Plain text: link-libs.txt is copied from rustc's output, and colour codes would end up in it.
   CARGO_TERM_COLOR: never
-  TAG: ${{ inputs.tag || github.ref_name }}
+  TAG: v${{ inputs.version }}
+  VERSION: ${{ inputs.version }}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ref: ${{ steps.what.outputs.ref }}
+      new: ${{ steps.what.outputs.new }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: what
+        run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
+            echo "Tag $TAG exists: adding missing packages to its release."
+            echo "ref=$TAG" >> "$GITHUB_OUTPUT"
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          for f in Cargo.toml capi/Cargo.toml; do
+            grep -q "^version = \"$VERSION\"" $f || { echo "::error::$f does not say version = \"$VERSION\""; exit 1; }
+          done
+          grep -q "^## \[$VERSION\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no '## [$VERSION]' section"; exit 1; }
+          echo "ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "new=true" >> "$GITHUB_OUTPUT"
+
   windows:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -41,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.prepare.outputs.ref }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -68,12 +104,13 @@ jobs:
           retention-days: 3
 
   macos:
+    needs: prepare
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.prepare.outputs.ref }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin, x86_64-apple-darwin, aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios
@@ -125,36 +162,44 @@ jobs:
           retention-days: 3
 
   linux:
-    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest, triple: x86_64-linux-gnu, arch: x86_64 }
+          - { runner: ubuntu-24.04-arm, triple: aarch64-linux-gnu, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.prepare.outputs.ref }}
       - uses: dtolnay/rust-toolchain@stable
       # No keyring here: it would tie every user to libdbus. Use storage_path on Linux.
       - name: Build
         run: |
           cargo rustc --release -p license-worker-client-capi --crate-type staticlib -- --print native-static-libs 2> build.log || { cat build.log; exit 1; }
           cargo build --release -p license-worker-client-capi
-          name=license_worker-$TAG-x86_64-linux-gnu
+          name=license_worker-$TAG-${{ matrix.triple }}
           mkdir -p pkg/$name/include pkg/$name/lib
           cp capi/include/license_worker.h pkg/$name/include/
           cp target/release/liblicense_worker.a target/release/liblicense_worker.so pkg/$name/lib/
-          { echo "# Static: link liblicense_worker.a with these (glibc, x86_64; built without the keyring feature):";
+          { echo "# Static: link liblicense_worker.a with these (glibc, ${{ matrix.arch }}; built without the keyring feature):";
             grep -o 'native-static-libs: .*' build.log | sed -e 's/native-static-libs: //' -e 's/\x1b\[[0-9;]*m//g' | tail -1; } > pkg/$name/link-libs.txt
           cp capi/README.md LICENSE pkg/$name/
           cc -O2 -I pkg/$name/include examples/c/lw_cli.c pkg/$name/lib/liblicense_worker.a $(tail -1 pkg/$name/link-libs.txt) -o lw_static
           examples/c/smoke.sh ./lw_static
+          file pkg/$name/lib/liblicense_worker.so
           tar -C pkg -czf $name.tar.gz $name
       - uses: actions/upload-artifact@v6
         with:
-          name: linux
+          name: linux-${{ matrix.arch }}
           path: "*.tar.gz"
           retention-days: 3
 
   release:
-    needs: [windows, macos, linux]
+    needs: [prepare, windows, macos, linux]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -162,26 +207,42 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.prepare.outputs.ref }}
+          fetch-depth: 0
       - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
+      - name: Package.swift, commit and tag (new versions only)
+        if: needs.prepare.outputs.new == 'true'
+        run: |
+          checksum=$(cat dist/LicenseWorker-$TAG.xcframework.zip.sha256)
+          capi/swift/write-package.sh "$VERSION" "$checksum"
+          git config user.name "License Worker"
+          git config user.email "dev@licenseworker.com"
+          git add Package.swift
+          git commit -m "Package.swift for $TAG" -m "The XCFramework attached to the $TAG release, checksum $checksum."
+          git tag -a "$TAG" -m "license-worker-client $VERSION"
+          # Fails, and releases nothing, if main moved since the build started: run it again.
+          git push origin HEAD:main
+          git push origin "$TAG"
       - name: Release notes from the changelog
         run: |
-          v=${TAG#v}
-          awk -v v="$v" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on {print}' CHANGELOG.md > notes.md
+          awk -v v="$VERSION" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on {print}' CHANGELOG.md > notes.md
           { echo; echo "### Packages"; echo;
             echo "Each package holds \`include/license_worker.h\`, the static library (plugins link this), the shared library, \`link-libs.txt\` and the licence. Windows comes in \`md\` (DLL C runtime, /MD) and \`mt\` (static C runtime, /MT, usual for plugins).";
+            echo; echo "Swift Package Manager: add this repository, version $VERSION, and \`import LicenseWorker\`.";
             echo; echo "The Rust crate itself: \`license-worker-client = { git = \"https://github.com/licenseworker/license-worker-client\", tag = \"$TAG\" }\`."; } >> notes.md
           ls -la dist
-      - name: Create or update the release
+      - name: Create the release, or add what it lacks
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$TAG" > /dev/null 2>&1; then
-            gh release upload "$TAG" dist/* --clobber
-            gh release edit "$TAG" --notes-file notes.md
+            have=$(gh release view "$TAG" --json assets -q '.assets[].name')
+            for f in dist/*; do
+              grep -qxF "$(basename "$f")" <<< "$have" && echo "kept   $(basename "$f")" || { gh release upload "$TAG" "$f"; echo "added  $(basename "$f")"; }
+            done
           else
             gh release create "$TAG" dist/* --title "license-worker-client $TAG" --notes-file notes.md --verify-tag
           fi

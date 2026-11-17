@@ -1,6 +1,6 @@
 [package]
 name = "license-worker-client"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 description = "Client for License Worker licence servers: activate, check offline-tolerantly with signed Ed25519 licences, deactivate"
@@ -8,7 +8,7 @@ repository = "https://github.com/licenseworker/license-worker-client"
 readme = "README.md"
 keywords = ["license", "licensing", "ed25519", "tauri", "activation"]
 categories = ["authentication", "cryptography"]
-exclude = [".github/", "capi/", "examples/"]
+exclude = [".github/", "capi/", "examples/", "Package.swift"]
 
 [features]
 default = []

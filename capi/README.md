@@ -30,6 +30,7 @@ carries ready-built packages, so nothing needs a Rust toolchain:
 | `license_worker-<tag>-macos-universal.zip` | macOS 11+, arm64 and x86_64 | `liblicense_worker.a`, `liblicense_worker.dylib` |
 | `LicenseWorker-<tag>.xcframework.zip` | iOS 13+ (device), iOS Simulator (arm64, x86_64), macOS 11+ | static libraries, header and module map (`import LicenseWorker` in Swift); `.sha256` beside it |
 | `license_worker-<tag>-x86_64-linux-gnu.tar.gz` | Linux x86_64 (glibc) | `liblicense_worker.a`, `liblicense_worker.so` |
+| `license_worker-<tag>-aarch64-linux-gnu.tar.gz` | Linux ARM64 (glibc): Raspberry Pi OS 64-bit, ARM servers | same |
 
 Every package has `include/license_worker.h` and `link-libs.txt`, the system
 libraries to link with the static library, printed by rustc for that very
@@ -79,6 +80,20 @@ the app's container.
 The exact list depends on the Rust version: `cargo rustc --release -p
 license-worker-client-capi --crate-type staticlib -- --print native-static-libs`
 prints it for yours.
+
+**Swift Package Manager.** In Xcode, File > Add Package Dependencies, the URL
+`https://github.com/licenseworker/license-worker-client`, then `import
+LicenseWorker`; or in a `Package.swift`:
+
+```swift
+.package(url: "https://github.com/licenseworker/license-worker-client", from: "0.2.1"),
+// and in the target:
+.product(name: "LicenseWorker", package: "license-worker-client"),
+```
+
+It downloads the XCFramework of that release (checked against the checksum in
+the tag's `Package.swift`) and links Security and CoreFoundation for you. The
+C functions are then plain Swift calls: `lw_check(client, &status)`.
 
 **Windows C runtime.** Plugins usually build with the static CRT (`/MT`).
 Rust links the DLL CRT unless told otherwise; build it with
