@@ -28,7 +28,7 @@ carries ready-built packages, so nothing needs a Rust toolchain:
 | `license_worker-<tag>-x86_64-pc-windows-msvc-md.zip` | Windows x64, DLL C runtime (`/MD`) | same |
 | `license_worker-<tag>-aarch64-pc-windows-msvc-mt.zip` / `-md.zip` | Windows on ARM64 | same |
 | `license_worker-<tag>-macos-universal.zip` | macOS 11+, arm64 and x86_64 | `liblicense_worker.a`, `liblicense_worker.dylib` |
-| `LicenseWorker-<tag>.xcframework.zip` | iOS 13+ (device), iOS Simulator (arm64, x86_64), macOS 11+ | static libraries, header and module map (`import LicenseWorker` in Swift); `.sha256` beside it |
+| `LicenseWorker-<tag>.xcframework.zip` | iOS 13+ (device), iOS Simulator (arm64, x86_64), macOS 11+ | static libraries, header and module map (C, C++, Objective-C); `.sha256` beside it |
 | `license_worker-<tag>-x86_64-linux-gnu.tar.gz` | Linux x86_64 (glibc) | `liblicense_worker.a`, `liblicense_worker.so` |
 | `license_worker-<tag>-aarch64-linux-gnu.tar.gz` | Linux ARM64 (glibc): Raspberry Pi OS 64-bit, ARM servers | same |
 
@@ -72,8 +72,7 @@ with three static slices: `ios-arm64`, `ios-arm64_x86_64-simulator` and
 `macos-arm64_x86_64` (deployment targets iOS 13.0 and macOS 11.0, set by
 `IPHONEOS_DEPLOYMENT_TARGET` and `MACOSX_DEPLOYMENT_TARGET`). Drag it into an
 Xcode target and add `Security.framework`; it carries `license_worker.h` and a
-module map, so C, C++, Objective-C and Swift (`import LicenseWorker`) all use
-it. With `--keyring` the licence can live in the Keychain on both. On iOS the
+module map, so C, C++ and Objective-C use it directly. With `--keyring` the licence can live in the Keychain on both. On iOS the
 licence is kept per app: set `cfg.keyring_service`, or a `storage_path` inside
 the app's container.
 
@@ -81,19 +80,12 @@ The exact list depends on the Rust version: `cargo rustc --release -p
 license-worker-client-capi --crate-type staticlib -- --print native-static-libs`
 prints it for yours.
 
-**Swift Package Manager.** In Xcode, File > Add Package Dependencies, the URL
-`https://github.com/licenseworker/license-worker-client`, then `import
-LicenseWorker`; or in a `Package.swift`:
-
-```swift
-.package(url: "https://github.com/licenseworker/license-worker-client", from: "0.2.1"),
-// and in the target:
-.product(name: "LicenseWorker", package: "license-worker-client"),
-```
-
-It downloads the XCFramework of that release (checked against the checksum in
-the tag's `Package.swift`) and links Security and CoreFoundation for you. The
-C functions are then plain Swift calls: `lw_check(client, &status)`.
+**Swift apps** should use [LicenseWorkerKit](../swift/README.md), the native
+Swift package, through Swift Package Manager: no XCFramework, no Rust. The
+XCFramework is for C, C++ and Objective-C code, and is a download on each
+Release (`LicenseWorker-<tag>.xcframework.zip`, with its `.sha256`). Release
+0.2.1 also served it through Swift Package Manager as `import LicenseWorker`;
+later releases do not, so Swift users never download it by accident.
 
 **Windows C runtime.** Plugins usually build with the static CRT (`/MT`).
 Rust links the DLL CRT unless told otherwise; build it with

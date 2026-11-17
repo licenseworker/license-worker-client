@@ -10,7 +10,7 @@ For desktop apps on **Windows**, macOS and Linux, and for the Rust side of a
 
 ```toml
 [dependencies]
-license-worker-client = { git = "https://github.com/licenseworker/license-worker-client", tag = "v0.2.1", features = ["keyring"] }
+license-worker-client = { git = "https://github.com/licenseworker/license-worker-client", tag = "v0.3.0", features = ["keyring"] }
 ```
 
 ## Quick start
@@ -165,6 +165,14 @@ fn main() {
 `LicenseClient` is `Send + Sync` with the storages here, so one `Arc` serves
 every command.
 
+## Swift (macOS and iOS)
+
+[LicenseWorkerKit](swift/README.md) is the same client written in Swift, with
+no dependencies beyond Foundation, CryptoKit and Security: a `LicenseController`
+state machine (an `ObservableObject` for SwiftUI) over the same rules, Keychain
+storage, and a testing library with a scripted server. Add this repository with
+Swift Package Manager and `import LicenseWorkerKit`. macOS 12+, iOS 15+.
+
 ## C and C++ (audio plugins)
 
 [`capi/`](capi/README.md) is a C interface over the same client, with a
@@ -172,8 +180,7 @@ cbindgen header (`capi/include/license_worker.h`), opaque handles and no
 panics across the boundary, for C++ apps and VST3, AU, AAX and CLAP plugins.
 Plugins link it **statically**. It builds for Windows x64 and ARM64 (MSVC,
 static CRT supported), as a universal macOS library, and as one XCFramework
-for iOS, the iOS Simulator and macOS, which Swift Package Manager installs
-(`import LicenseWorker`). Prebuilt packages for every platform are on each
+for iOS, the iOS Simulator and macOS. Prebuilt packages for every platform are on each
 [GitHub Release](https://github.com/licenseworker/license-worker-client/releases);
 the C example passes the same end-to-end check as the Rust client.
 

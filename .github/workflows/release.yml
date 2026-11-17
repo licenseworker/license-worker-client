@@ -4,14 +4,12 @@ name: Release
 #
 # New version (no tag yet): checks that Cargo.toml and CHANGELOG.md say that
 # version, builds every package from main, and only when all of them built,
-# writes Package.swift with the XCFramework's checksum, commits it, tags that
-# commit v<version>, and publishes the GitHub Release. Swift Package Manager
-# reads Package.swift from the tag, so the tag must be made here, after the
-# build: do not push release tags by hand.
+# tags that commit v<version> and publishes the GitHub Release. A tag is never
+# left pointing at something that did not build.
 #
 # Existing tag (e.g. v0.2.0): builds from the tag and adds the packages the
-# Release does not have yet. Assets already there are never replaced: the
-# XCFramework's checksum may be recorded in that tag's Package.swift.
+# Release does not have yet. Assets already there are never replaced (v0.2.1's
+# Package.swift records the checksum of its XCFramework).
 #
 # Each package holds include/license_worker.h, the libraries, link-libs.txt
 # (what to link with, from rustc itself), README.md and LICENSE.
@@ -217,25 +215,19 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - name: Package.swift, commit and tag (new versions only)
+      - name: Tag (new versions only)
         if: needs.prepare.outputs.new == 'true'
         run: |
-          checksum=$(cat dist/LicenseWorker-$TAG.xcframework.zip.sha256)
-          capi/swift/write-package.sh "$VERSION" "$checksum"
           git config user.name "License Worker"
           git config user.email "dev@licenseworker.com"
-          git add Package.swift
-          git commit -m "Package.swift for $TAG" -m "The XCFramework attached to the $TAG release, checksum $checksum."
           git tag -a "$TAG" -m "license-worker-client $VERSION"
-          # Fails, and releases nothing, if main moved since the build started: run it again.
-          git push origin HEAD:main
           git push origin "$TAG"
       - name: Release notes from the changelog
         run: |
           awk -v v="$VERSION" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on {print}' CHANGELOG.md > notes.md
           { echo; echo "### Packages"; echo;
             echo "Each package holds \`include/license_worker.h\`, the static library (plugins link this), the shared library, \`link-libs.txt\` and the licence. Windows comes in \`md\` (DLL C runtime, /MD) and \`mt\` (static C runtime, /MT, usual for plugins).";
-            echo; echo "Swift Package Manager: add this repository, version $VERSION, and \`import LicenseWorker\`.";
+            echo; echo "Swift (macOS, iOS): add this repository with Swift Package Manager, version $VERSION, and \`import LicenseWorkerKit\`. The XCFramework here is the C interface, for C, C++ and Objective-C.";
             echo; echo "The Rust crate itself: \`license-worker-client = { git = \"https://github.com/licenseworker/license-worker-client\", tag = \"$TAG\" }\`."; } >> notes.md
           ls -la dist
       - name: Create the release, or add what it lacks

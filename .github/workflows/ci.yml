@@ -124,3 +124,15 @@ jobs:
           xcrun --sdk iphoneos clang -arch arm64 -mios-version-min=13.0 -I $X/ios-arm64/Headers examples/c/lw_cli.c $X/ios-arm64/liblicense_worker.a $LIBS -o lw_cli_ios
           xcrun --sdk iphonesimulator clang -arch arm64 -arch x86_64 -mios-simulator-version-min=13.0 -I $X/ios-arm64_x86_64-simulator/Headers examples/c/lw_cli.c $X/ios-arm64_x86_64-simulator/liblicense_worker.a $LIBS -o lw_cli_iossim
           lipo -info lw_cli_ios lw_cli_iossim
+
+  # LicenseWorkerKit: the Swift package at the repository root.
+  swift:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - run: swift test
+      - name: Build for iOS
+        run: |
+          xcodebuild -scheme LicenseWorkerKit -destination 'generic/platform=iOS Simulator' build -quiet
+          xcodebuild -scheme LicenseWorkerKit -destination 'generic/platform=iOS' build -quiet

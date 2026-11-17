@@ -4,14 +4,35 @@ All notable changes to this crate are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the crate follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] - 2026-11-17
+
+### Added
+
+- **LicenseWorkerKit**, the client in Swift for macOS 12+ and iOS 15+, through
+  Swift Package Manager (`import LicenseWorkerKit`). No dependencies beyond
+  Foundation, CryptoKit and Security. A `LicenseController` state machine
+  (an `ObservableObject`) over the same rules as the Rust crate: validation
+  at most once a day, quiet re-activation, a high-water clock, the hand-over
+  of an older app version's key, Keychain or file storage. A
+  `LicenseWorkerKitTesting` library gives an app's tests a scripted server, a
+  test signer and a movable clock. 55 tests, the 16 shared vectors among them.
+
+### Changed
+
+- **Swift Package Manager now serves LicenseWorkerKit, not the C interface's
+  XCFramework.** A package that held both would make every Swift user
+  download the XCFramework. The XCFramework stays a download on each
+  Release for C, C++ and Objective-C. Projects that used
+  `import LicenseWorker` through SwiftPM stay on 0.2.1, or move to
+  LicenseWorkerKit.
+- Releases tag the commit they built; `Package.swift` is no longer written by
+  the release.
 
 ### Fixed
 
 - Windows packages: `link-libs.txt` named `windows.0.53.0.lib`, an import
   library no C project has; it now lists the system libraries instead
-  (`advapi32 secur32 crypt32 bcrypt ncrypt`). The 0.2.1 packages are fine to
-  use: link those in its place.
+  (`advapi32 secur32 crypt32 bcrypt ncrypt`).
 
 ## [0.2.1] - 2026-11-17
 
@@ -77,6 +98,7 @@ docs, packaged as one crate.
 - The `license-worker-client` command, in the contract License Worker's
   `npm run check:clients` drives.
 
+[0.3.0]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.3.0
 [0.2.1]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.2.1
 [0.2.0]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.2.0
 [0.1.0]: https://github.com/licenseworker/license-worker-client/releases/tag/v0.1.0

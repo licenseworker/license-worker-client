@@ -121,8 +121,9 @@ release, and tokens signed before keep verifying.
 These are the rules this crate follows. A client that breaks them locks out
 paying customers, or lets a forged answer through.
 
-1. **Only a signed revocation locks.** Lock, and forget the stored licence,
-   only on a token that verifies to *revoked*. A timeout, a 429, a 5xx, an
+1. **Only a signed revocation locks.** Lock only on a token that verifies to
+   *revoked*; then either forget the stored licence (the Rust client) or keep
+   the revocation, to show its reason at the next launch (the Swift one). A timeout, a 429, a 5xx, an
    unsigned `valid: false`, `license_key not found.` or a token that fails to
    verify all leave the app as it was.
 2. **Store the licence and judge by it offline.** Keep the key, the instance
