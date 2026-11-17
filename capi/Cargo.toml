@@ -1,0 +1,23 @@
+[package]
+name = "license-worker-client-capi"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "C ABI for license-worker-client, for C and C++ apps and audio plugins"
+repository = "https://github.com/licenseworker/license-worker-client"
+publish = false
+
+[lib]
+name = "license_worker"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+default = []
+## KeyringStorage: Windows Credential Manager, macOS Keychain, Linux Secret Service.
+keyring = ["license-worker-client/keyring"]
+
+[dependencies]
+license-worker-client = { path = ".." }
+
+[dev-dependencies]
+cbindgen = { version = "0.29", default-features = false }

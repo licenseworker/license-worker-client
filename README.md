@@ -165,6 +165,16 @@ fn main() {
 `LicenseClient` is `Send + Sync` with the storages here, so one `Arc` serves
 every command.
 
+## C and C++ (audio plugins)
+
+[`capi/`](capi/README.md) is a C interface over the same client, with a
+cbindgen header (`capi/include/license_worker.h`), opaque handles and no
+panics across the boundary, for C++ apps and VST3, AU, AAX and CLAP plugins.
+Plugins link it **statically**. It builds for Windows x64 and ARM64 (MSVC,
+static CRT supported), as a universal macOS library, and as one XCFramework
+for iOS, the iOS Simulator and macOS (`capi/build-apple.sh`); the C example
+passes the same end-to-end check as the Rust client.
+
 ## Only the verifier
 
 `license_worker_client::verify` checks a signed licence with no network and no

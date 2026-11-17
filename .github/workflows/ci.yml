@@ -31,8 +31,8 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --check
-      - run: cargo clippy --all-targets --all-features -- -D warnings
-      - run: cargo doc --no-deps --all-features
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - run: cargo doc --workspace --no-deps --all-features
         env:
           RUSTDOCFLAGS: -D warnings
 
@@ -49,6 +49,78 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test
-      - run: cargo test --features keyring
+      - run: cargo test --workspace
+      - run: cargo test --workspace --all-features
       - run: cargo build --release --bin license-worker-client
+
+  # The C interface: the static library, the C and C++ examples built with
+  # CMake as a plugin would, and the C example run offline.
+  capi:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-latest
+            cmake: -DLW_KEYRING=ON
+            bin: build/examples/lw_cli
+          - name: macos-universal
+            os: macos-latest
+            cmake: -DLW_KEYRING=ON "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+            targets: x86_64-apple-darwin
+            bin: build/examples/lw_cli
+          - name: windows-x64-static-crt
+            os: windows-latest
+            cmake: -A x64 -DLW_KEYRING=ON -DLW_MSVC_STATIC_CRT=ON
+            bin: build/examples/Release/lw_cli.exe
+          - name: windows-x64
+            os: windows-latest
+            cmake: -A x64
+            bin: build/examples/Release/lw_cli.exe
+          - name: windows-arm64
+            os: windows-latest
+            cmake: -A ARM64 -DLW_KEYRING=ON -DLW_MSVC_STATIC_CRT=ON -DLW_RUST_TARGET=aarch64-pc-windows-msvc
+            targets: aarch64-pc-windows-msvc
+            cross: true
+    name: capi (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.targets }}
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - uses: Swatinem/rust-cache@v2
+      - name: Configure
+        shell: bash
+        run: cmake -S examples -B build/examples -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake }}
+      - name: Build library and examples
+        run: cmake --build build/examples --config Release
+      - if: runner.os == 'macOS'
+        run: lipo -info build/examples/lw_cli && lipo -info build/examples/cargo/universal/liblicense_worker.a
+      - name: Run the C example offline
+        if: ${{ !matrix.cross }}
+        shell: bash
+        run: examples/c/smoke.sh "${{ matrix.bin }}"
+
+  # iOS (device and simulator) and macOS as one XCFramework, and the C example
+  # linked against each iOS slice.
+  apple-xcframework:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios, aarch64-apple-ios-sim, x86_64-apple-ios, aarch64-apple-darwin, x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - run: capi/build-apple.sh --keyring
+      - name: Link the C example for iOS
+        run: |
+          X=build/apple/LicenseWorker.xcframework
+          LIBS="-framework Security -framework CoreFoundation -liconv"
+          xcrun --sdk iphoneos clang -arch arm64 -mios-version-min=13.0 -I $X/ios-arm64/Headers examples/c/lw_cli.c $X/ios-arm64/liblicense_worker.a $LIBS -o lw_cli_ios
+          xcrun --sdk iphonesimulator clang -arch arm64 -arch x86_64 -mios-simulator-version-min=13.0 -I $X/ios-arm64_x86_64-simulator/Headers examples/c/lw_cli.c $X/ios-arm64_x86_64-simulator/liblicense_worker.a $LIBS -o lw_cli_iossim
+          lipo -info lw_cli_ios lw_cli_iossim

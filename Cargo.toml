@@ -8,7 +8,7 @@ repository = "https://github.com/licenseworker/license-worker-client"
 readme = "README.md"
 keywords = ["license", "licensing", "ed25519", "tauri", "activation"]
 categories = ["authentication", "cryptography"]
-exclude = [".github/"]
+exclude = [".github/", "capi/", "examples/"]
 
 [features]
 default = []
@@ -47,3 +47,6 @@ path = "src/main.rs"
 
 [package.metadata.docs.rs]
 all-features = true
+
+[workspace]
+members = ["capi"]
